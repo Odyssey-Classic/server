@@ -34,48 +34,45 @@ func New(port uint16) *Network {
 	}
 }
 
-func (n *Network) Start(ctx context.Context, wg *sync.WaitGroup) {
+func (n *Network) Start(ctx context.Context, wg *sync.WaitGroup) error {
+	var startErr error
 	n.once.Do(func() {
 		n.wg = wg
 		n.wg.Add(1)
-		n.clients = make(ClientMap)
-
 		go func() {
-			n.start(ctx)
-			close(n.Out)
-			n.clientGroup.Wait()
-			wg.Done()
+			startErr = n.start(ctx)
+			n.wg.Done()
 		}()
 	})
+	return startErr
 }
 
-func (n *Network) start(ctx context.Context) {
+func (n *Network) start(ctx context.Context) error {
 	server := &http.Server{
 		Addr: fmt.Sprintf(":%d", n.port),
 	}
 	server.Handler = n.wsConnect(ctx)
 	server.BaseContext = func(listener net.Listener) context.Context { return ctx }
 
-	// Start the server in a goroutine and capture errors
-	errCh := make(chan error, 1)
 	go func() {
-		err := server.ListenAndServe()
-		if err != nil && err != http.ErrServerClosed {
-			slog.Error("network server error", "err", err)
+		<-ctx.Done()
+		slog.Info("network shutting down")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		n.shutdown(shutdownCtx)
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			slog.Error("network shutdown error", "err", err)
+		} else {
+			slog.Info("network shutdown complete")
 		}
-		errCh <- err
 	}()
 
-	<-ctx.Done()
-	slog.Info("network shutting down")
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := server.Shutdown(shutdownCtx); err != nil {
-		slog.Error("network shutdown error", "err", err)
-	} else {
-		slog.Info("network shutdown complete")
+	slog.Info("network API starting on :" + fmt.Sprintf("%d", n.port))
+	err := server.ListenAndServe()
+	if err != nil && err != http.ErrServerClosed {
+		slog.Error("network server error", "err", err)
 	}
-	n.shutdown()
+	return err
 }
 
 func (n *Network) addClient(ctx context.Context, client *Client) {
@@ -85,7 +82,7 @@ func (n *Network) addClient(ctx context.Context, client *Client) {
 	n.processClient(ctx, client)
 }
 
-func (n *Network) shutdown() {
+func (n *Network) shutdown(_ context.Context) {
 	slog.Info("shutting down clients")
 	for _, client := range n.clients {
 		err := client.close()
@@ -93,4 +90,10 @@ func (n *Network) shutdown() {
 			slog.Error("error closing client", "error", err)
 		}
 	}
+	slog.Info("clients shutdown")
+}
+
+// Stop shuts down the Network service
+func (n *Network) Stop() {
+	// Implement shutdown logic here
 }

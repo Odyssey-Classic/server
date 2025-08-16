@@ -21,18 +21,20 @@ func New(port uint16) *Meta {
 	return &Meta{port: port}
 }
 
-func (m *Meta) Start(ctx context.Context, wg *sync.WaitGroup) {
+func (m *Meta) Start(ctx context.Context, wg *sync.WaitGroup) error {
+	var startErr error
 	m.once.Do(func() {
 		m.wg = wg
 		m.wg.Add(1)
 		go func() {
-			m.start(ctx)
+			startErr = m.start(ctx)
 			m.wg.Done()
 		}()
 	})
+	return startErr
 }
 
-func (m *Meta) start(ctx context.Context) {
+func (m *Meta) start(ctx context.Context) error {
 	r := chi.NewRouter()
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +60,14 @@ func (m *Meta) start(ctx context.Context) {
 	}()
 
 	slog.Info("meta API starting on :" + fmt.Sprintf("%d", m.port))
-	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	err := srv.ListenAndServe()
+	if err != nil && err != http.ErrServerClosed {
 		slog.Error("meta API server error", "err", err)
 	}
+	return err
+}
+
+// Stop shuts down the Meta service
+func (m *Meta) Stop() {
+	// Implement shutdown logic here
 }

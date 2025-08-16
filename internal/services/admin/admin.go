@@ -21,18 +21,20 @@ func New(port uint16) *Admin {
 	return &Admin{port: port}
 }
 
-func (a *Admin) Start(ctx context.Context, wg *sync.WaitGroup) {
+func (a *Admin) Start(ctx context.Context, wg *sync.WaitGroup) error {
+	var startErr error
 	a.once.Do(func() {
 		a.wg = wg
 		a.wg.Add(1)
 		go func() {
-			a.start(ctx)
+			startErr = a.start(ctx)
 			a.wg.Done()
 		}()
 	})
+	return startErr
 }
 
-func (a *Admin) start(ctx context.Context) {
+func (a *Admin) start(ctx context.Context) error {
 	r := chi.NewRouter()
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -58,7 +60,14 @@ func (a *Admin) start(ctx context.Context) {
 	}()
 
 	slog.Info("admin API starting on :" + fmt.Sprintf("%d", a.port))
-	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	err := srv.ListenAndServe()
+	if err != nil && err != http.ErrServerClosed {
 		slog.Error("admin API server error", "err", err)
 	}
+	return err
+}
+
+// Stop shuts down the Admin service
+func (a *Admin) Stop() {
+	// Implement shutdown logic here
 }

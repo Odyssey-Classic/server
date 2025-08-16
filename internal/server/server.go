@@ -54,10 +54,33 @@ func (s *Server) Start(ctx context.Context, wg *sync.WaitGroup) error {
 }
 
 func (s *Server) start(ctx context.Context) error {
-	s.admin.Start(ctx, s.wg)
-	s.meta.Start(ctx, s.wg)
-	s.network.Start(ctx, s.wg)
-	s.game.Start(ctx, s.wg)
+	var startErr error
+	startErr = errors.Join(startErr, s.admin.Start(ctx, s.wg))
+	startErr = errors.Join(startErr, s.meta.Start(ctx, s.wg))
+	startErr = errors.Join(startErr, s.network.Start(ctx, s.wg))
+	startErr = errors.Join(startErr, s.game.Start(ctx, s.wg))
 
+	if startErr != nil {
+		s.stop()
+		return startErr
+	}
+
+	s.wg.Wait()
 	return nil
+}
+
+// stop shuts down all sub-services
+func (s *Server) stop() {
+	if s.admin != nil {
+		s.admin.Stop()
+	}
+	if s.meta != nil {
+		s.meta.Stop()
+	}
+	if s.network != nil {
+		s.network.Stop()
+	}
+	if s.game != nil {
+		s.game.Stop()
+	}
 }
