@@ -1,5 +1,11 @@
 package game
 
+// Package game provides a service that manages running the game processes.
+//
+// It is not intended to handle the actual game logic, but to allow the server
+// to start and manage the game simulation as a go routine along other necessary
+// services.
+
 import (
 	"context"
 	"log/slog"
