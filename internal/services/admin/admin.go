@@ -12,13 +12,17 @@ import (
 )
 
 type Admin struct {
-	wg   *sync.WaitGroup
-	port uint16
-	once sync.Once
+	wg       *sync.WaitGroup
+	port     uint16
+	once     sync.Once
+	adminAPI *API
 }
 
 func New(port uint16) *Admin {
-	return &Admin{port: port}
+	return &Admin{
+		port:     port,
+		adminAPI: api(),
+	}
 }
 
 func (a *Admin) Start(ctx context.Context, wg *sync.WaitGroup) error {
@@ -37,6 +41,10 @@ func (a *Admin) Start(ctx context.Context, wg *sync.WaitGroup) error {
 func (a *Admin) start(ctx context.Context) error {
 	r := chi.NewRouter()
 
+	// Mount the admin API routes
+	r.Mount("/", a.adminAPI.Routes())
+
+	// Keep the existing health check
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
