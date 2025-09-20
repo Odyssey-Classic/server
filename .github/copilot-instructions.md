@@ -12,3 +12,7 @@ The preference is towards a larger number of smaller files that fully encapsulat
 # Go Code
 
 Please make sure each go file that is created or edited if formated with `go fmt`.
+
+## Tests
+
+Please prefer using the `stretchr/testify/suite` package for tests.
