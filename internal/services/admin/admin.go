@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/Odyssey-Classic/server/internal/web"
 )
 
 type Admin struct {
@@ -41,7 +43,7 @@ func (a *Admin) Start(ctx context.Context, wg *sync.WaitGroup) error {
 func (a *Admin) start(ctx context.Context) error {
 	r := chi.NewRouter()
 
-	// Mount the admin API routes
+	// Mount the admin API routes (they are already scoped under /admin inside the API router)
 	r.Mount("/", a.adminAPI.Routes())
 
 	// Keep the existing health check
@@ -49,6 +51,13 @@ func (a *Admin) start(ctx context.Context) error {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
 	})
+
+	// Serve the embedded UI (SPA). This catch-all tries to serve static assets first,
+	// then falls back to index.html for client-side routes. API routes take precedence.
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		web.SPAHandler().ServeHTTP(w, r)
+	})
+	r.Handle("/*", web.SPAHandler())
 
 	srv := &http.Server{
 		Addr:    ":" + fmt.Sprintf("%d", a.port), // Use the port from the Admin struct

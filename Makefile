@@ -14,15 +14,18 @@ GO_MOD := $(GO_CMD) mod
 # UI parameters
 UI_DIR := ui
 UI_DEV_CMD := npm run dev --prefix $(UI_DIR)
+UI_BUILD_CMD := npm run build --prefix $(UI_DIR)
+UI_DIST := $(UI_DIR)/dist
+WEB_DIST := internal/web/dist
 
 # Binary output
-BIN := odyssey-server
+BIN := ./build/odyssey-server
 
 .PHONY: all build server ui dev clean tidy wait-admin open
 
 all: build
 
-build:
+build: ui-build
 	@echo "==> Building server"
 	$(GO_BUILD) -o $(BIN) ./cmd
 
@@ -34,6 +37,13 @@ ui:
 	@echo "==> Starting UI dev server"
 	cd $(UI_DIR) && npm install --no-audit --no-fund >/dev/null 2>&1 || true
 	$(UI_DEV_CMD)
+
+.PHONY: ui-build
+
+ui-build:
+	@echo "==> Building UI"
+	@cd $(UI_DIR) && npm install --no-audit --no-fund >/dev/null 2>&1 || true
+	$(UI_BUILD_CMD)
 
 # Wait until the admin port responds (basic TCP check)
 wait-admin:
@@ -70,6 +80,9 @@ tidy:
 clean:
 	@echo "==> Cleaning build artifacts"
 	rm -f $(BIN)
+	@echo "==> Cleaning embedded UI dist (keeping .keep if present)"
+	@mkdir -p $(WEB_DIST)
+	@find $(WEB_DIST) -mindepth 1 -not -name '.keep' -delete || true
 
 help:
 	@echo "Available targets:"
