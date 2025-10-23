@@ -13,6 +13,12 @@ The preference is towards a larger number of smaller files that fully encapsulat
 
 Please make sure each go file that is created or edited if formated with `go fmt`.
 
+Only get environment variables from the `main` package.  
+
 ## Tests
 
 Please prefer using the `stretchr/testify/suite` package for tests.
+
+Do not create code just for the use of tests.  
+If code only exists to make the tests work, then assume this is an error.  
+If the existing code isn't easily testable, assume this is a problem with the code.  

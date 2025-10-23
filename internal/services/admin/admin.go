@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/Odyssey-Classic/server/internal/data"
 	"github.com/Odyssey-Classic/server/internal/web"
 )
 
@@ -18,12 +19,14 @@ type Admin struct {
 	port     uint16
 	once     sync.Once
 	adminAPI *API
+	dataRoot data.Root
 }
 
-func New(port uint16) *Admin {
+func New(port uint16, root data.Root) *Admin {
 	return &Admin{
 		port:     port,
-		adminAPI: api(),
+		dataRoot: root,
+		adminAPI: api(root),
 	}
 }
 

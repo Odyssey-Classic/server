@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Odyssey-Classic/server/internal/data"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -16,7 +17,9 @@ type AdminAPITestSuite struct {
 
 // SetupTest runs before each test method
 func (s *AdminAPITestSuite) SetupTest() {
-	s.api = api()
+	// Use a per-test temporary data directory via data.Root abstraction
+	tmp := s.T().TempDir()
+	s.api = api(data.NewOSRoot(tmp))
 }
 
 // TestMiddlewareSetup tests that the API sets up middleware correctly

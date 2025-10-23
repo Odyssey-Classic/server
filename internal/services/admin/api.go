@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
+	"github.com/Odyssey-Classic/server/internal/data"
 	"github.com/Odyssey-Classic/server/internal/services/admin/maps"
 )
 
@@ -16,10 +17,10 @@ type API struct {
 }
 
 // New creates a new Admin API instance
-func api() *API {
+func api(root data.Root) *API {
 	api := &API{
 		router:  chi.NewRouter(),
-		mapsAPI: maps.New(),
+		mapsAPI: maps.NewFileBacked(root.MapsDir()),
 	}
 
 	api.setupMiddleware()

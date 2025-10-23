@@ -14,3 +14,11 @@ func GetUint16(key string, defaultVal uint16) uint16 {
 	}
 	return defaultVal
 }
+
+// GetString retrieves a string value from the environment or returns the default.
+func GetString(key, defaultVal string) string {
+	if val, ok := os.LookupEnv(key); ok && val != "" {
+		return val
+	}
+	return defaultVal
+}

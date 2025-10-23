@@ -5,29 +5,33 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-    "strings"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
 	gamemaps "github.com/Odyssey-Classic/server/internal/game/maps"
+	"github.com/Odyssey-Classic/server/internal/services/admin/maps/store"
+	filestore "github.com/Odyssey-Classic/server/internal/services/admin/maps/store/file"
 	"github.com/Odyssey-Classic/server/internal/services/admin/utils"
 )
 
 // API represents the maps admin API
 type API struct {
-	// In a real implementation, this would be a database or service layer
-	// For now, we'll use an in-memory store as a placeholder
-	maps   map[int]*gamemaps.Map
-	nextID int
+	store store.MapStore
 }
 
-// New creates a new maps API instance
-func New() *API {
-	return &API{
-		maps:   make(map[int]*gamemaps.Map),
-		nextID: 1,
+// NewFileBacked returns an API backed by the file store at root (default data/maps when empty).
+func NewFileBacked(root string) *API {
+	fs, err := filestore.New(root)
+	if err != nil {
+		panic(err)
 	}
+	return &API{store: fs}
 }
+
+// NewWithStore allows injecting a custom store (useful for alternate backends).
+// Keep this constructor minimal and only if actually used elsewhere.
+func NewWithStore(s store.MapStore) *API { return &API{store: s} }
 
 // Routes returns the chi router for maps endpoints
 func (a *API) Routes() chi.Router {
@@ -45,20 +49,11 @@ func (a *API) Routes() chi.Router {
 // listMaps handles GET /admin/maps - List all maps
 func (a *API) listMaps(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
-	maps := make([]*gamemaps.Map, 0, len(a.maps))
-	if query == "" {
-		for _, m := range a.maps {
-			maps = append(maps, m)
-		}
-	} else {
-		q := strings.ToLower(query)
-		for _, m := range a.maps {
-			if strings.Contains(strings.ToLower(m.Name), q) {
-				maps = append(maps, m)
-			}
-		}
+	maps, err := a.store.List(query)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, "Failed to list maps")
+		return
 	}
-
 	if err := utils.WriteJSON(w, http.StatusOK, maps); err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, "Failed to encode response")
 		return
@@ -72,21 +67,17 @@ func (a *API) createMap(w http.ResponseWriter, r *http.Request) {
 		utils.WriteError(w, http.StatusBadRequest, "Invalid JSON")
 		return
 	}
-
-	// Assign ID and store
-	mapData.ID = a.nextID
-	a.nextID++
-
-	// Create new map with proper initialization
-	newMap := gamemaps.NewMap(mapData.ID, mapData.Name)
-	newMap.Tags = mapData.Tags
-	newMap.Attributes = mapData.Attributes
-	newMap.Tiles = mapData.Tiles
-	newMap.Links = mapData.Links
-
-	a.maps[newMap.ID] = newMap
-
-	if err := utils.WriteJSON(w, http.StatusCreated, newMap); err != nil {
+	name := strings.TrimSpace(mapData.Name)
+	if name == "" {
+		utils.WriteError(w, http.StatusBadRequest, "Name is required")
+		return
+	}
+	m, err := a.store.Create(name)
+	if err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, "Failed to create map")
+		return
+	}
+	if err := utils.WriteJSON(w, http.StatusCreated, m); err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, "Failed to encode response")
 		return
 	}
@@ -100,12 +91,11 @@ func (a *API) getMap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m, exists := a.maps[id]
-	if !exists {
+	m, err := a.store.Get(id)
+	if err != nil {
 		utils.WriteError(w, http.StatusNotFound, "Map not found")
 		return
 	}
-
 	if err := utils.WriteJSON(w, http.StatusOK, m); err != nil {
 		utils.WriteError(w, http.StatusInternalServerError, "Failed to encode response")
 		return
@@ -120,12 +110,6 @@ func (a *API) updateMap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, exists := a.maps[id]
-	if !exists {
-		utils.WriteError(w, http.StatusNotFound, "Map not found")
-		return
-	}
-
 	var mapData gamemaps.Map
 	if err := json.NewDecoder(r.Body).Decode(&mapData); err != nil {
 		utils.WriteError(w, http.StatusBadRequest, "Invalid JSON")
@@ -134,7 +118,10 @@ func (a *API) updateMap(w http.ResponseWriter, r *http.Request) {
 
 	// Preserve the original ID
 	mapData.ID = id
-	a.maps[id] = &mapData
+	if err := a.store.Update(&mapData); err != nil {
+		utils.WriteError(w, http.StatusInternalServerError, "Failed to update map")
+		return
+	}
 
 	response := map[string]interface{}{
 		"success":        true,
@@ -155,13 +142,10 @@ func (a *API) deleteMap(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, exists := a.maps[id]
-	if !exists {
+	if err := a.store.Delete(id); err != nil {
 		utils.WriteError(w, http.StatusNotFound, "Map not found")
 		return
 	}
-
-	delete(a.maps, id)
 
 	response := map[string]interface{}{
 		"success":    true,

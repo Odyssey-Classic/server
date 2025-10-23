@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"sync"
 
+	"github.com/Odyssey-Classic/server/internal/data"
 	"github.com/Odyssey-Classic/server/internal/services/admin"
 	"github.com/Odyssey-Classic/server/internal/services/game"
 	"github.com/Odyssey-Classic/server/internal/services/meta"
@@ -31,7 +32,7 @@ func NewServer(cfg Config, options ...Option) (*Server, error) {
 		wg: &sync.WaitGroup{},
 	}
 
-	server.admin = admin.New(cfg.Ports.Admin)
+	server.admin = admin.New(cfg.Ports.Admin, data.NewOSRoot(cfg.DataDir))
 	server.meta = meta.New(cfg.Ports.Meta)
 	server.network = network.New(cfg.Ports.Network)
 	server.game = game.New(server.network.Out)

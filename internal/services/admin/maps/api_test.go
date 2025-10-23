@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -18,13 +19,24 @@ type MapsAPITestSuite struct {
 	suite.Suite
 	api    *API
 	router chi.Router
+	dir    string
 }
 
 // SetupTest runs before each test method
 func (s *MapsAPITestSuite) SetupTest() {
-	s.api = New()
+	// Use a temp directory per test so file-backed store is isolated
+	d, err := os.MkdirTemp("", "maps-api-test-*")
+	s.Require().NoError(err)
+	s.dir = d
+	s.api = NewFileBacked(d)
 	s.router = chi.NewRouter()
 	s.router.Mount("/admin/maps", s.api.Routes())
+}
+
+func (s *MapsAPITestSuite) TearDownTest() {
+	if s.dir != "" {
+		os.RemoveAll(s.dir)
+	}
 }
 
 // TestListMaps_Empty tests listing maps when no maps exist
