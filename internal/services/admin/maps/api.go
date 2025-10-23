@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+    "strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -43,9 +44,19 @@ func (a *API) Routes() chi.Router {
 
 // listMaps handles GET /admin/maps - List all maps
 func (a *API) listMaps(w http.ResponseWriter, r *http.Request) {
+	query := r.URL.Query().Get("q")
 	maps := make([]*gamemaps.Map, 0, len(a.maps))
-	for _, m := range a.maps {
-		maps = append(maps, m)
+	if query == "" {
+		for _, m := range a.maps {
+			maps = append(maps, m)
+		}
+	} else {
+		q := strings.ToLower(query)
+		for _, m := range a.maps {
+			if strings.Contains(strings.ToLower(m.Name), q) {
+				maps = append(maps, m)
+			}
+		}
 	}
 
 	if err := utils.WriteJSON(w, http.StatusOK, maps); err != nil {
