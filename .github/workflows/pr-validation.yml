@@ -1,0 +1,49 @@
+name: PR Validations
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  go-mod-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@4
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          check-latest: true
+
+      - name: Run go mod tidy and go mod vendor
+        run: |
+          go mod tidy
+          go mod vendor
+
+      - name: Check for changes
+        run: |
+          if [[ -n "$(git status --porcelain go.mod go.sum vendor)" ]]; then
+            echo "Error: go.mod, go.sum, or vendor directory not up-to-date after running go mod tidy and go mod vendor."
+            echo "Please run 'go mod tidy && go mod vendor' locally and commit the changes."
+            git status --porcelain go.mod go.sum vendor
+            exit 1
+          fi
+
+  go-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@4
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          check-latest: true
+
+      - name: Test
+        run: |
+          go test ./...
