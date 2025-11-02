@@ -21,4 +21,16 @@ Please prefer using the `stretchr/testify/suite` package for tests.
 
 Do not create code just for the use of tests.  
 If code only exists to make the tests work, then assume this is an error.  
-If the existing code isn't easily testable, assume this is a problem with the code.  
+If the existing code isn't easily testable, assume this is a problem with the code.
+
+# UI Code
+
+## PixiJS
+
+When working with PixiJS code in the `ui/` directory, reference the official PixiJS documentation for LLMs:
+
+- Full documentation: https://pixijs.com/llms-full.txt
+- Medium documentation: https://pixijs.com/llms-medium.txt
+- Documentation index: https://pixijs.com/llms.txt
+
+These files are automatically updated daily by the PixiJS team and contain the complete API reference, examples, and best practices for PixiJS v8.
