@@ -30,6 +30,7 @@ func main() {
 			Meta:    GetUint16("ODY_META_PORT", 8082),
 			Network: GetUint16("ODY_NETWORK_PORT", 8080),
 		},
+		DataDir: GetString("ODY_DATA_DIR", "data"),
 	}
 
 	srv, err := server.NewServer(cfg,

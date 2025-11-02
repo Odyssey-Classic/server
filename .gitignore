@@ -36,3 +36,15 @@ vendor/
 
 # Go workspace file
 go.work
+
+build/
+
+# Node
+ui/node_modules/
+
+# Embedded UI build output (generated during build)
+internal/web/dist/*
+!internal/web/dist/.keep
+
+# Map data (do not commit persistent game data)
+data/

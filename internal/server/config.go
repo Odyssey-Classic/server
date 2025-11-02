@@ -1,7 +1,8 @@
 package server
 
 type Config struct {
-	Ports Ports
+	Ports   Ports
+	DataDir string
 }
 
 type Ports struct {
