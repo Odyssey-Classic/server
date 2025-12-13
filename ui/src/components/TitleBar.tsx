@@ -2,9 +2,10 @@ import React, { useState } from 'react'
 
 interface TitleBarProps {
     title?: string
+    onHomeClick?: () => void
 }
 
-export default function TitleBar({ title = 'Server Admin' }: TitleBarProps) {
+export default function TitleBar({ title = 'Server Admin', onHomeClick }: TitleBarProps) {
     const [menuOpen, setMenuOpen] = useState(false)
 
     const toggleMenu = () => {
@@ -36,7 +37,13 @@ export default function TitleBar({ title = 'Server Admin' }: TitleBarProps) {
             </div>
 
             <div className="title-bar-center">
-                <h1 className="title-bar-title">{title}</h1>
+                <h1 
+                    className="title-bar-title" 
+                    onClick={onHomeClick}
+                    style={{ cursor: onHomeClick ? 'pointer' : 'default' }}
+                >
+                    {title}
+                </h1>
             </div>
 
             <div className="title-bar-right">
