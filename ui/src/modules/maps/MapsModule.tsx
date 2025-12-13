@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import MapCanvas from '../../components/MapCanvas'
-import TilePalette from '../../components/TilePalette'
+import MapCanvas from './components/MapCanvas'
+import TilePalette from './components/TilePalette'
 import { createMap as apiCreateMap, listMaps as apiListMaps, getMap as apiGetMap, updateMap as apiUpdateMap, type GameMap } from '../../api/maps'
 
 export default function MapsModule() {
