@@ -46,5 +46,3 @@ ui/node_modules/
 internal/web/dist/*
 !internal/web/dist/.keep
 
-# Map data (do not commit persistent game data)
-data/
