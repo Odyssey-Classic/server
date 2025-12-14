@@ -8,16 +8,7 @@ The `data` package defines a `Root` interface that provides access to various su
 
 ## Usage
 
-```go
-import "github.com/Odyssey-Classic/server/internal/data"
-
-// Create a new data root pointing to a filesystem directory
-root := data.NewOSRoot("/path/to/data")
-
-// Access the maps subdirectory
-mapsDir := root.MapsDir()
-// Returns: "/path/to/data/maps"
-```
+For usage examples, see [root.go](root.go) and [root_test.go](root_test.go).
 
 ## Interface
 
