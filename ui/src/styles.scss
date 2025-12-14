@@ -1,6 +1,7 @@
 :root {
     --toolbar-height: 48px;
     --title-bar-height: 56px;
+    --breadcrumbs-height: 36px;
 }
 
 body {
@@ -107,6 +108,49 @@ body {
     &:hover {
         background: #f5f5f5;
     }
+}
+
+/* Breadcrumbs */
+.breadcrumbs {
+    position: fixed;
+    top: var(--title-bar-height);
+    left: 0;
+    right: 0;
+    background: white;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 8px 16px;
+    font-size: 13px;
+    color: #666;
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.breadcrumb-link {
+    background: none;
+    border: none;
+    color: #007bff;
+    cursor: pointer;
+    padding: 0;
+    font-size: 13px;
+    text-decoration: none;
+    transition: color 0.2s;
+
+    &:hover {
+        color: #0056b3;
+        text-decoration: underline;
+    }
+}
+
+.breadcrumb-current {
+    color: #333;
+    font-weight: 500;
+}
+
+.breadcrumb-separator {
+    color: #999;
+    margin: 0 4px;
 }
 
 /* Content wrapper to account for fixed title bar */

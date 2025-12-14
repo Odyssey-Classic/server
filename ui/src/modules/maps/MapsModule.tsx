@@ -2,13 +2,31 @@ import React, { useEffect, useState } from 'react'
 import MapCanvas from './components/MapCanvas'
 import TilePalette from './components/TilePalette'
 import { createMap as apiCreateMap, listMaps as apiListMaps, getMap as apiGetMap, updateMap as apiUpdateMap, type GameMap } from '../../api/maps'
+import { useTitleBar } from '../../contexts/TitleBarContext'
+import { useNavigation } from '../../contexts/NavigationContext'
 
 export default function MapsModule() {
+    const { setTitle, setMenuItems, setBreadcrumbs } = useTitleBar()
+    const { navigateTo } = useNavigation()
     const [activeTile, setActiveTile] = useState<number>(0)
     const [maps, setMaps] = useState<GameMap[]>([])
     const [search, setSearch] = useState('')
     const [current, setCurrent] = useState<GameMap | null>(null)
     const [name, setName] = useState('')
+
+    // Set title and menu items for this module
+    useEffect(() => {
+        setTitle('Maps')
+        setMenuItems([
+            { label: 'New Map', action: onNewMap },
+            { label: 'Export All', action: () => console.log('Export all maps') },
+            { label: 'Import', action: () => console.log('Import maps') }
+        ])
+        setBreadcrumbs([
+            { label: 'Home', onClick: () => navigateTo('dashboard') },
+            { label: 'Maps' }
+        ])
+    }, [setTitle, setMenuItems, setBreadcrumbs, navigateTo])
 
     // load list on mount and whenever search changes (debounced via useEffect)
     useEffect(() => {
@@ -80,57 +98,7 @@ export default function MapsModule() {
 
     return (
         <div className="module-container">
-            <header className="module-header">
-                <h1>Maps</h1>
-                {/* <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <h1 style={{ margin: 0, marginRight: 'auto' }}>Maps</h1>
-                    <button onClick={onNewMap}>New Map</button>
-                    <input
-                        placeholder="Map name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        style={{ width: 240 }}
-                    />
-                    <button onClick={onSave} disabled={!name.trim()}>
-                        Save
-                    </button>
-                </div> */}
-            </header>
-            <main className="module-content">
-                {/* <div className="editor" style={{ display: 'grid', gridTemplateColumns: '280px 1fr 280px', gap: 12, padding: 12, flex: 1 }}>
-                    <aside className="list" style={{ padding: 8, borderRight: '1px solid #333' }}>
-                        <h3 style={{ marginTop: 0 }}>Maps</h3>
-                        <input
-                            placeholder="Search by name"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            style={{ width: '100%', marginBottom: 8 }}
-                        />
-                        <div style={{ maxHeight: 500, overflow: 'auto' }}>
-                            {maps.length === 0 && <div style={{ opacity: 0.7 }}>No maps</div>}
-                            {maps.map((m) => (
-                                <div
-                                    key={m.id}
-                                    role="button"
-                                    onClick={() => onLoad(m.id)}
-                                    style={{
-                                        padding: '6px 8px',
-                                        cursor: 'pointer',
-                                        background: current?.id === m.id ? '#2a2a2a' : 'transparent',
-                                    }}
-                                >
-                                    {m.name} {m.id ? <span style={{ opacity: 0.6 }}>#{m.id}</span> : null}
-                                </div>
-                            ))}
-                        </div>
-                    </aside>
-                    <section className="canvas">
-                        <MapCanvas activeTile={activeTile} />
-                    </section>
-                    <aside className="palette">
-                        <TilePalette activeTile={activeTile} onSelect={setActiveTile} />
-                    </aside>
-                </div> */}
+            <main className="module-content" style={{ padding: 0 }}>
             </main>
         </div>
     )

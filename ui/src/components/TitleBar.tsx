@@ -1,15 +1,17 @@
 import React, { useState } from 'react'
+import { useTitleBar } from '../contexts/TitleBarContext'
 
-interface TitleBarProps {
-    title?: string
-    onHomeClick?: () => void
-}
-
-export default function TitleBar({ title = 'Server Admin', onHomeClick }: TitleBarProps) {
+export default function TitleBar() {
+    const { title, menuItems } = useTitleBar()
     const [menuOpen, setMenuOpen] = useState(false)
 
     const toggleMenu = () => {
         setMenuOpen(!menuOpen)
+    }
+
+    const handleMenuItemClick = (action: () => void) => {
+        action()
+        setMenuOpen(false)
     }
 
     return (
@@ -26,22 +28,23 @@ export default function TitleBar({ title = 'Server Admin', onHomeClick }: TitleB
                         <line x1="3" y1="18" x2="21" y2="18" />
                     </svg>
                 </button>
-                {menuOpen && (
+                {menuOpen && menuItems.length > 0 && (
                     <div className="dropdown-menu">
-                        <div className="menu-item">File</div>
-                        <div className="menu-item">Edit</div>
-                        <div className="menu-item">View</div>
-                        <div className="menu-item">Help</div>
+                        {menuItems.map((item, index) => (
+                            <div 
+                                key={index} 
+                                className="menu-item"
+                                onClick={() => handleMenuItemClick(item.action)}
+                            >
+                                {item.label}
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>
 
             <div className="title-bar-center">
-                <h1 
-                    className="title-bar-title" 
-                    onClick={onHomeClick}
-                    style={{ cursor: onHomeClick ? 'pointer' : 'default' }}
-                >
+                <h1 className="title-bar-title">
                     {title}
                 </h1>
             </div>

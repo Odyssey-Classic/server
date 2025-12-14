@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useEffect } from 'react'
+import { useTitleBar } from '../contexts/TitleBarContext'
 
-export type ModuleType = 'dashboard' | 'server-info' | 'users' | 'maps' | 'items' | 'guilds' | 'scripts'
+export type ModuleType = 'dashboard' | 'server-info' | 'users' | 'administrators' | 'maps' | 'items' | 'guilds' | 'scripts'
 
 interface ModuleTileProps {
     title: string
@@ -24,6 +25,16 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ onNavigate }: DashboardProps) {
+    const { setTitle, setMenuItems, setBreadcrumbs } = useTitleBar()
+
+    useEffect(() => {
+        setTitle('Server Admin')
+        setMenuItems([])
+        setBreadcrumbs([
+            { label: 'Home' }
+        ])
+    }, [setTitle, setMenuItems, setBreadcrumbs])
+
     const modules = [
         {
             id: 'server-info' as ModuleType,
@@ -36,6 +47,12 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             title: 'Users',
             description: 'Manage user accounts and permissions',
             icon: '👥'
+        },
+        {
+            id: 'administrators' as ModuleType,
+            title: 'Administrators',
+            description: 'Manage administrator accounts',
+            icon: '🔐'
         },
         {
             id: 'maps' as ModuleType,
