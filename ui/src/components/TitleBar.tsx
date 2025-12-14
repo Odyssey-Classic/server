@@ -1,46 +1,12 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { useTitleBar } from '../contexts/TitleBarContext'
 
 export default function TitleBar() {
-    const { title, menuItems } = useTitleBar()
-    const [menuOpen, setMenuOpen] = useState(false)
-
-    const toggleMenu = () => {
-        setMenuOpen(!menuOpen)
-    }
-
-    const handleMenuItemClick = (action: () => void) => {
-        action()
-        setMenuOpen(false)
-    }
+    const { title } = useTitleBar()
 
     return (
         <div className="title-bar">
             <div className="title-bar-left">
-                <button 
-                    className="icon-button hamburger-menu" 
-                    onClick={toggleMenu}
-                    aria-label="Menu"
-                >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <line x1="3" y1="6" x2="21" y2="6" />
-                        <line x1="3" y1="12" x2="21" y2="12" />
-                        <line x1="3" y1="18" x2="21" y2="18" />
-                    </svg>
-                </button>
-                {menuOpen && menuItems.length > 0 && (
-                    <div className="dropdown-menu">
-                        {menuItems.map((item, index) => (
-                            <div 
-                                key={index} 
-                                className="menu-item"
-                                onClick={() => handleMenuItemClick(item.action)}
-                            >
-                                {item.label}
-                            </div>
-                        ))}
-                    </div>
-                )}
             </div>
 
             <div className="title-bar-center">
