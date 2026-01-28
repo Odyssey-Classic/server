@@ -9,6 +9,7 @@ import { MapsModule } from './modules/maps'
 import { ItemsModule } from './modules/items'
 import { GuildsModule } from './modules/guilds'
 import { ScriptsModule } from './modules/scripts'
+import { SpritesheetsModule } from './modules/spritesheets'
 import { TitleBarProvider } from './contexts/TitleBarContext'
 import { NavigationProvider } from './contexts/NavigationContext'
 
@@ -21,6 +22,7 @@ function getModuleFromPath(): ModuleType {
     if (path.startsWith('/admin/items')) return 'items'
     if (path.startsWith('/admin/guilds')) return 'guilds'
     if (path.startsWith('/admin/scripts')) return 'scripts'
+    if (path.startsWith('/admin/spritesheets')) return 'spritesheets'
     return 'dashboard'
 }
 
@@ -64,6 +66,8 @@ export default function App() {
                 return <GuildsModule />
             case 'scripts':
                 return <ScriptsModule />
+            case 'spritesheets':
+                return <SpritesheetsModule />
             case 'dashboard':
             default:
                 return <Dashboard onNavigate={navigateTo} />

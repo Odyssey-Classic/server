@@ -153,9 +153,9 @@ body {
     margin: 0 4px;
 }
 
-/* Content wrapper to account for fixed title bar */
+/* Content wrapper to account for fixed title bar and breadcrumbs */
 .admin-content {
-    margin-top: var(--title-bar-height);
+    margin-top: calc(var(--title-bar-height) + var(--breadcrumbs-height));
     flex: 1;
     display: flex;
     flex-direction: column;

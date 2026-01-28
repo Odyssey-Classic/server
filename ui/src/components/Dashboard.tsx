@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react'
 import { useTitleBar } from '../contexts/TitleBarContext'
 
-export type ModuleType = 'dashboard' | 'server-info' | 'users' | 'administrators' | 'maps' | 'items' | 'guilds' | 'scripts'
+export type ModuleType = 'dashboard' | 'server-info' | 'users' | 'administrators' | 'maps' | 'items' | 'guilds' | 'scripts' | 'spritesheets'
 
 interface ModuleTileProps {
     title: string
@@ -77,6 +77,12 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
             title: 'Scripts',
             description: 'Edit and manage game scripts',
             icon: '📜'
+        },
+        {
+            id: 'spritesheets' as ModuleType,
+            title: 'Spritesheets',
+            description: 'Manage and view game spritesheets',
+            icon: '🎨'
         }
     ]
 

@@ -1,12 +1,63 @@
-import React from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { useTitleBar } from '../contexts/TitleBarContext'
 
 export default function TitleBar() {
-    const { title } = useTitleBar()
+    const { title, menuItems } = useTitleBar()
+    const [menuOpen, setMenuOpen] = useState(false)
+    const menuRef = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setMenuOpen(false)
+            }
+        }
+
+        if (menuOpen) {
+            document.addEventListener('mousedown', handleClickOutside)
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside)
+        }
+    }, [menuOpen])
+
+    const handleMenuItemClick = (action: () => void) => {
+        action()
+        setMenuOpen(false)
+    }
 
     return (
         <div className="title-bar">
             <div className="title-bar-left">
+                {menuItems.length > 0 && (
+                    <div ref={menuRef} style={{ position: 'relative' }}>
+                        <button 
+                            className="icon-button" 
+                            aria-label="Menu"
+                            onClick={() => setMenuOpen(!menuOpen)}
+                        >
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <line x1="3" y1="12" x2="21" y2="12" />
+                                <line x1="3" y1="6" x2="21" y2="6" />
+                                <line x1="3" y1="18" x2="21" y2="18" />
+                            </svg>
+                        </button>
+                        {menuOpen && (
+                            <div className="dropdown-menu">
+                                {menuItems.map((item, index) => (
+                                    <div
+                                        key={index}
+                                        className="menu-item"
+                                        onClick={() => handleMenuItemClick(item.action)}
+                                    >
+                                        {item.label}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             <div className="title-bar-center">
