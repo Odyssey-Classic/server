@@ -8,6 +8,8 @@ of play, and persists worlds over time.
 player sessions and authentication, world persistence and migration, in-world
 moderation and safety tooling, server-side enforcement of fairness.
 
+Full detail: [`docs/scope.md`](./docs/scope.md).
+
 **Out of scope:** presentation, rendering and input handling (see `client`), the
 shared protocol contract (see `proto`), operator and host-facing tooling (see
 `admin-tools`), cross-server identity and discovery (see `registry`).
