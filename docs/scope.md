@@ -63,6 +63,36 @@ Scripts may:
 Execution is **synchronous in-tick for gameplay hooks**, with deferred
 scheduling for slow work that re-enters safely off-tick.
 
+#### Scheduling and time
+
+The engine provides **no per-concept timer systems.** Gated checks ("may this
+player claim the daily reward?") are a stored timestamp compared against now,
+evaluated lazily when asked — no timers, and correct across restarts.
+
+Expiry needs a push, so the engine provides **one persisted scheduled-wakeup
+queue**: `(fire_at, handler, payload)`, drained in order each tick, with
+`schedule_in(duration)` as a helper. It replaces respawn timers, buff expiry,
+growth timers and everything of that shape.
+
+Wakeups missed while the server was down **fire on catch-up at boot**, in
+`fire_at` order and rate-limited so boot is not a stampede. The handler receives
+both `scheduled_for` and the actual `now`, because only the script can know
+whether a late fire should still act — a boss respawn should, a stale daily reset
+should not. Entries may carry a `drop_if_late_by` policy, and recurring entries
+coalesce so a schedule that missed ten fires runs once.
+
+Delivery is **at-least-once**: a crash between firing and committing effects
+re-fires the wakeup. **Handlers must therefore be idempotent**, and the engine
+passes a stable `fire_id` so authors can guard on it. This deliberately moves
+responsibility to script authors, because a handler's effects may span stores the
+engine cannot commit as one atomic unit — and it must be prominent in
+author-facing documentation.
+
+Scripts read time from their **invocation context** rather than an ambient clock,
+giving one coherent `now` per tick and making scripts testable without clock
+manipulation. Durations within a session use monotonic time; cross-restart
+intervals use wall clock, which can jump.
+
 ### 4. Content model and lifecycle
 
 Three layers, with different ownership and flow direction:
@@ -100,22 +130,64 @@ rollback-able, and is previewable before it applies.
 
 ### 5. Persistence
 
-Six layers with genuinely different requirements:
+There is **no custom journal and no snapshot layer.** SQLite's WAL is the
+durability mechanism and SQLite's recovery is the crash-recovery mechanism.
+State divides two ways:
 
-| Layer | Contents | Substrate |
+| Kind | Rule | Examples |
 |---|---|---|
-| Authored content | Maps, templates, scripts | Git-backed revision store |
-| Accounts and characters | Credentials, inventory, skills, progress | SQLite (interface-backed) |
-| Live simulation | Positions, HP, buffs, aggro, cooldowns | Memory only |
-| Durable world state | Ground drops, containers, housing, spawn timers | Snapshot + journal |
-| Audit and operational log | Chat, trades, moderation, admin actions | Append-only, pluggable sink |
-| Ephemeral | Sessions, tokens, rate limits, presence | Memory only |
+| **Valuable** | Committed in a transaction before the action is acknowledged | Item locations, currency, character records, quest and skill progress, permissions, housing, scheduled wakeups |
+| **Not valuable** | Memory only, lost on restart by design | Sub-tile position and facing, combat timers, buffs, aggro, cooldowns, sessions, presence, rate limits |
 
-**Durability is tiered by state type** — proposed assignment, pending sign-off:
+Substrates by layer:
 
-- **Commit before acknowledging** — currency, inventory transfers, trades, purchases, character creation and deletion, permission changes
-- **Journal plus periodic snapshot**, seconds of loss acceptable — quest progress, experience and skill gains, container and ground state, housing, spawn timers
-- **Memory only**, loss acceptable — position within a step, combat timers, buffs, cooldowns, aggro, presence
+| Layer | Substrate |
+|---|---|
+| Authored content (A) | Git-backed revision store |
+| Script-authored content (B) | SQLite, namespaced, above authored content |
+| Accounts, characters, items, world state (C) | SQLite, behind an interface |
+| Audit ledger | Transactional outbox in SQLite, shipped to a pluggable append-only sink |
+| Live simulation | Memory |
+
+#### Item identity
+
+Every item instance has a **stable UUID and a single location field** —
+`(container_kind, container_id, slot)`. Moving an item is one row update, so it
+can never exist in two places or in none: duplication is structurally impossible
+rather than something to be careful about. A unique constraint on
+`(container, slot)` gives slot integrity. Ground drops are just a location, so
+they survive restarts.
+
+A **stack is one row with a quantity**, so moving 10 of 50 gold is a decrement
+and an increment inside one transaction. **Currency is an item**, giving one
+uniform model across coins, ammunition and collectibles.
+
+**Split and merge are the only item operations that are not relocations** — split
+mints a UUID, merge destroys one — and are therefore the only places a
+duplication bug can originate. Both are single transactions.
+
+The audit ledger consequently needs two entry shapes: UUID relocation for whole
+items, and `(type, quantity, from, to)` for stack transfers.
+
+The simulation holds items in memory as a **write-through cache; the database is
+authoritative for location.**
+
+#### Player position
+
+The **anchor** — map and tile — is persistent; sub-tile offset and facing are
+memory. The anchor is written **on transitions only** (map or zone change, death,
+respawn, logout), which is affordable because worlds are built from small distinct
+maps. A crash resumes a player at their last transition.
+
+An anchor can dangle when a content change removes the map it referenced. A
+**script hook gets first chance to remap it**, falling back to the world spawn
+point, with the event reported to the operator. A bad anchor never blocks a login.
+
+#### Restitution
+
+Restitution reads the audit ledger and applies **compensating transactions** —
+move the item back, restore the balance. Game logic is never re-executed, so
+**no deterministic replay requirement exists anywhere in the engine.**
 
 ### 6. Identity and sessions
 
@@ -215,7 +287,8 @@ branching or merging of content revisions.
 
 ## Open questions
 
-- **Durability tier assignments** — the proposal in §5 needs sign-off.
+Decision history and rationale: [`decisions.md`](./decisions.md).
+
 - **Tick rate** — 10 Hz is provisional pending live-load testing.
 - **Interest management** — the algorithm for deciding what each client is told about.
 - **Registry SSO** — token format and trust establishment.
