@@ -90,11 +90,11 @@ rate-limited so boot is not a stampede. Entries may set `drop_if_late_by`, and
 recurring entries coalesce rather than firing once per missed interval.
 
 **D17 (2026-09-25) — Wakeup delivery is at-least-once; handlers must be idempotent.**
-A handler's effects may span stores the engine cannot commit as one atomic unit,
-so exactly-once is not deliverable in general. The engine passes a stable
-`fire_id` for authors to guard on. **This is a real burden on script authors and
-must be prominent in author-facing documentation** — the failure mode is
-duplicated rewards.
+**Superseded by D47 (2026-09-26.)** Reasoning at the time: a handler's effects may
+span stores the engine cannot commit atomically, so exactly-once was judged
+undeliverable in general, and the burden was placed on authors via a stable
+`fire_id`. This overstated the limit — exactly-once *is* deliverable for the
+subset of effects the database can roll back, which is most wakeup handlers.
 
 **D18 (2026-09-25) — Scripts read time from their invocation context, not an ambient clock.**
 One coherent `now` per tick, and scripts testable without clock manipulation.
@@ -250,3 +250,37 @@ Context cancellation, progress reporting, concurrency limits, explicit throttlin
 bounded memory and disk. A bare goroutine is insufficient: a saturated core blows
 the tick budget on a small VPS, and allocation-heavy work raises GC cost
 process-wide.
+
+## Wakeup delivery (revision)
+
+**D47 (2026-09-26) — Three delivery modes, defaulting to `exactly_once`.**
+`exactly_once` wraps the handler and its dequeue in one transaction;
+`at_least_once` may re-run and guards on `fire_id`; `at_most_once` dequeues before
+invoking. The discriminator is **whether every effect is rollback-able by the
+database**, not handler complexity — a long reward pipeline touching only
+persistent state is safe, a three-line chat broadcast is not.
+
+`exactly_once` is the default because it makes the safe thing free and the risky
+thing explicit: an author writing a reward handler gets correctness without
+knowing the concept exists, while an author doing non-transactional work is told
+at the keyboard rather than discovering a duplicated-reward bug in production.
+Consistent with D28 (duplication structurally impossible) and D42 (refuse rather
+than limp). Cost: `exactly_once` handlers must be short, since SQLite has a single
+writer and the handler holds the write lock, must avoid non-transactional side
+effects, and cannot use the D14 deferred-work hatch.
+
+**D48 (2026-09-26) — Delivery mode is declared on handler registration, not per schedule call.**
+It is a property of what the handler does, and the handler body is fixed. The same
+handler scheduled from three call sites with three different guarantees would be a
+bug, not a feature. Registration-site declaration also lets the engine validate a
+handler's calls against its declared mode consistently. Options ride in a named
+bag (`{ delivery }`) rather than a positional flag, alongside the D16 entry
+options.
+
+**D49 (2026-09-26) — The `exactly_once` constraint is enforced at runtime, warning before erroring.**
+Static detection is not achievable — JavaScript dispatch is too dynamic — so
+violations are caught when a non-transactional API is called inside an
+`exactly_once` handler. Violations warn first, with the version at which they
+become fatal named when the warning ships. To keep "warning first" from decaying
+into permanent soft failure, a violation is **recorded as a content health finding
+surfaced in `admin-tools`**, not merely logged.

@@ -81,12 +81,29 @@ whether a late fire should still act — a boss respawn should, a stale daily re
 should not. Entries may carry a `drop_if_late_by` policy, and recurring entries
 coalesce so a schedule that missed ten fires runs once.
 
-Delivery is **at-least-once**: a crash between firing and committing effects
-re-fires the wakeup. **Handlers must therefore be idempotent**, and the engine
-passes a stable `fire_id` so authors can guard on it. This deliberately moves
-responsibility to script authors, because a handler's effects may span stores the
-engine cannot commit as one atomic unit — and it must be prominent in
-author-facing documentation.
+**Delivery mode is declared per handler at registration**, because it is a
+property of what the handler does and its body is fixed:
+
+| Mode | Mechanism | For handlers whose effects are |
+|---|---|---|
+| `exactly_once` (default) | Engine wraps handler and dequeue in one transaction | Only persistent state — items, currency, character data, further wakeups |
+| `at_least_once` | No wrapping; may re-run; guard on `fire_id` | Not all rollback-able — client messages, live sim spawns, deferred work |
+| `at_most_once` | Dequeue commits before invoking | Ephemeral, where dropping beats doubling — weather, ambient flavour |
+
+The discriminator is **whether every effect is one the database can roll back** —
+not how complex the handler is. A long reward pipeline touching only persistent
+state stays `exactly_once`; a three-line chat broadcast does not.
+
+`exactly_once` costs real constraints: the handler must be short, since SQLite has
+one writer and the handler holds the write lock; it must perform no
+non-transactional side effects; and it cannot use the deferred-work escape hatch.
+
+The engine **enforces the constraint at runtime** — a non-transactional call inside
+an `exactly_once` handler is a violation. Violations **warn before they error**:
+logged, and recorded as a content health finding surfaced in `admin-tools` rather
+than buried in a log, with the version at which they become fatal named when the
+warning ships. Static detection is not achievable — JavaScript dispatch is too
+dynamic — so runtime detection plus visible reporting is the mechanism.
 
 Scripts read time from their **invocation context** rather than an ambient clock,
 giving one coherent `now` per tick and making scripts testable without clock
