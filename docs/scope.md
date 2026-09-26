@@ -37,6 +37,20 @@ movement, combat, and interaction; validate all client intent and reconcile
 client mispredictions. The server is the only authority — no client assertion is
 trusted, including from privileged clients.
 
+#### Interest management
+
+**Scope is the map.** A client is told about every entity on the map it occupies
+and nothing outside it. Map entry delivers a full snapshot of that map's entities;
+thereafter only deltas; map exit lets the client discard the whole set at once.
+Because scope changes only on map transition — already a meaningful, persisted
+event under D32 — there is no per-entity enter/exit bookkeeping, which is where
+finer schemes generate ghost and missing-entity bugs.
+
+Two consequences follow, and both are limits rather than details:
+
+- **A map's population is the scaling limit.** Cost within a map grows with the square of its occupancy, so a crowd hub — a market, a capital, a world event — is the shape that breaks per-map scope, not total player count. Occupancy needs a watched threshold.
+- **Nothing on a map can be hidden from a client on that map.** Anything sent is known, whatever the UI draws, so stealth and invisibility cannot be implemented by omission. A world wanting them needs a deliberate per-entity exception to scope, not a rendering trick.
+
 ### 2. Game systems
 
 First-class engine primitives, not left to world authors:
@@ -314,7 +328,6 @@ branching or merging of content revisions.
 Decision history and rationale: [`decisions.md`](./decisions.md).
 
 - **Tick rate** — 10 Hz is provisional pending live-load testing.
-- **Interest management** — the algorithm for deciding what each client is told about.
 - **Registry SSO** — token format and trust establishment.
 - **Content manifest** — how content declares its required engine version range.
 - **Deferred by choice** — capability-based permissions, direct Git push, automated moderation actions, Postgres, a second script runtime, non-WebSocket transports, Connect as a control-plane protocol.

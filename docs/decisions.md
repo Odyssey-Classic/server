@@ -295,3 +295,23 @@ forever. Parked entries are dead-lettered, reported in `admin-tools`, and manual
 re-triggerable once the script is fixed, so nothing is silently lost and no backlog
 grows unseen. Applies to any handler left pending after a failed fire, not only to
 constraint violations — an ordinary null dereference has the same effect.
+
+**D51 (2026-09-26) — Interest scope is the map: clients are told about everything on their map and nothing beyond it.**
+Sufficient because worlds are built from small distinct maps (the same premise as
+D32), putting perhaps 20–40 players on a map rather than 500 in one space. Map
+entry sends a full snapshot, then deltas, and map exit discards the set wholesale
+— so scope changes only on map transition, which is already a meaningful persisted
+event, and the per-entity enter/exit bookkeeping that produces ghost entities in
+radius- or line-of-sight schemes never exists.
+
+Two limits are accepted deliberately. **Map occupancy, not total population, is the
+scaling limit** — within-map cost grows with the square of occupancy, so crowd hubs
+such as markets, capitals and world events are what break this, and occupancy needs
+a watched threshold. **Hidden information within a map is impossible** — anything
+sent to a client is known to it regardless of what the UI draws, so stealth and
+invisibility cannot be implemented by omission and require a deliberate per-entity
+exception to scope.
+
+Also the anti-cheat boundary: a map is approximately what a player could legitimately
+observe, so per-map scope denies cross-map maphacks by construction while allowing
+within-map wallhacks by design.
