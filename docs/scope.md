@@ -164,6 +164,24 @@ rates. The server advertises its engine version and control-API semver; clients
 declare a supported range and **refuse to operate on mismatch** with a clear
 message.
 
+**Style: REST + OpenAPI.** Chosen for consumer accessibility — `curl` works, any
+language works, and an OpenAPI spec is directly consumable by third-party tools
+and automated moderators with no protobuf toolchain required. Paths are versioned
+(`/v1/...`) and **the spec is generated from code** so it cannot drift from the
+implementation.
+
+Connect (gRPC + gRPC-Web + JSON from one handler) must remain reachable later,
+which imposes four constraints — cheap from the first handler, expensive to
+retrofit:
+
+- **Handlers are a thin adapter, never the logic.** The control plane is a Go service layer taking request structs and returning response structs; `net/http` types never appear in its signatures. A Connect handler becomes a second adapter over the same layer.
+- **Operations are method-shaped, not deeply RESTful.** Prefer explicit actions (`POST /v1/worlds/{id}/promote`) over verb overloading or nested-resource cleverness, one request object per operation. HTTP semantics carry transport meaning only, never business meaning.
+- **Errors are domain values.** Every failure has a stable machine-readable code, mapped to an HTTP status by the adapter. Handlers never invent status codes.
+- **Progress is a typed event stream** in the service layer, delivered over SSE today; Connect server-streaming would be another adapter over it.
+
+Content bundle upload is expected to remain a plain HTTP route regardless, since
+large multipart and streaming bodies have no Connect equivalent worth adopting.
+
 Expensive processing does **not** belong here. Clients do the heavy authoring-time
 work — script type-checking, reference resolution, map baking, linting, reporting
 — and send results. The server still performs cheap authoritative structural
@@ -197,10 +215,9 @@ branching or merging of content revisions.
 
 ## Open questions
 
-- **Control API style** — REST/OpenAPI or gRPC. Undecided.
 - **Durability tier assignments** — the proposal in §5 needs sign-off.
 - **Tick rate** — 10 Hz is provisional pending live-load testing.
 - **Interest management** — the algorithm for deciding what each client is told about.
 - **Registry SSO** — token format and trust establishment.
 - **Content manifest** — how content declares its required engine version range.
-- **Deferred by choice** — capability-based permissions, direct Git push, automated moderation actions, Postgres, a second script runtime, non-WebSocket transports.
+- **Deferred by choice** — capability-based permissions, direct Git push, automated moderation actions, Postgres, a second script runtime, non-WebSocket transports, Connect as a control-plane protocol.
