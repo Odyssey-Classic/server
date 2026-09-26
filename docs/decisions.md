@@ -277,10 +277,21 @@ handler's calls against its declared mode consistently. Options ride in a named
 bag (`{ delivery }`) rather than a positional flag, alongside the D16 entry
 options.
 
-**D49 (2026-09-26) — The `exactly_once` constraint is enforced at runtime, warning before erroring.**
-Static detection is not achievable — JavaScript dispatch is too dynamic — so
-violations are caught when a non-transactional API is called inside an
-`exactly_once` handler. Violations warn first, with the version at which they
-become fatal named when the warning ships. To keep "warning first" from decaying
-into permanent soft failure, a violation is **recorded as a content health finding
-surfaced in `admin-tools`**, not merely logged.
+**D49 (2026-09-26) — The `exactly_once` constraint is a hard error from the first release.**
+Static detection is not achievable — JavaScript dispatch is too dynamic — so a
+non-transactional API called inside an `exactly_once` handler throws at the call
+site and its transaction rolls back. No warning period: consistent behaviour from
+day one is worth more than gentleness toward early adopters, who are the most
+sophisticated users the project will ever have, and a warning that never becomes an
+error is a permanent soft failure. Consistent with D42 (refuse rather than limp).
+Violations are additionally recorded as content health findings surfaced in
+`admin-tools`.
+
+**D50 (2026-09-26) — A throwing wakeup handler is retried a bounded number of times with backoff, then parked.**
+A hard error (D49) rolls the transaction back, so the entry stays pending and would
+otherwise re-fire on every drain. Bounded retries recover transient failures such
+as a lock timeout; the cap prevents a permanently broken handler from looping
+forever. Parked entries are dead-lettered, reported in `admin-tools`, and manually
+re-triggerable once the script is fixed, so nothing is silently lost and no backlog
+grows unseen. Applies to any handler left pending after a failed fire, not only to
+constraint violations — an ordinary null dereference has the same effect.

@@ -98,12 +98,19 @@ state stays `exactly_once`; a three-line chat broadcast does not.
 one writer and the handler holds the write lock; it must perform no
 non-transactional side effects; and it cannot use the deferred-work escape hatch.
 
-The engine **enforces the constraint at runtime** — a non-transactional call inside
-an `exactly_once` handler is a violation. Violations **warn before they error**:
-logged, and recorded as a content health finding surfaced in `admin-tools` rather
-than buried in a log, with the version at which they become fatal named when the
-warning ships. Static detection is not achievable — JavaScript dispatch is too
-dynamic — so runtime detection plus visible reporting is the mechanism.
+A handler that throws leaves its entry pending, so failures are **retried a
+bounded number of times with backoff, then parked** as dead-letter entries and
+reported in `admin-tools`, where an operator can fix the script and re-trigger
+them. Transient failures recover on their own; a permanently broken handler stops
+rather than looping forever or growing a silent backlog.
+
+The engine **enforces the constraint at runtime, as a hard error** — a
+non-transactional call inside an `exactly_once` handler throws, and its
+transaction rolls back. There is no warning period: the behaviour is consistent
+from the first release, matching D42's refusal to limp on mismatch. Static
+detection is not achievable — JavaScript dispatch is too dynamic — so enforcement
+is at the call site. Violations are also recorded as content health findings
+surfaced in `admin-tools`.
 
 Scripts read time from their **invocation context** rather than an ambient clock,
 giving one coherent `now` per tick and making scripts testable without clock
